@@ -4,3 +4,4 @@ __pycache__/
 *.csv
 data/
 .DS_Store
+scratch.py

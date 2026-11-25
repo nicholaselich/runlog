@@ -3,7 +3,7 @@
 ## About
 
 A FastAPI service built with SQLAlchemy and PostgreSQL for storing and analyzing my Strava running data. I love to run and 
-wanted to combine a passion with learning how to design, create, and test REST services on real data. 
+wanted to combine one of my passions with learning how to design, create, and test REST services on real data. 
 
 ## Architecture
 

@@ -1,0 +1,54 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: dev
+          POSTGRES_DB: runlog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    env:
+      PGPASSWORD: dev
+      DATABASE_URL: postgresql://postgres:dev@localhost:5432/runlog
+      TEST_DATABASE_URL: postgresql://postgres:dev@localhost:5432/runlog_test
+
+    steps:
+      - uses: actions/checkout@v7
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+        
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create test database
+        run: psql -h localhost -U postgres -c "CREATE DATABASE runlog_test;"
+      
+      - name: Apply schema to both databases
+        run: |
+          for db in runlog runlog_test; do
+            for file in sql/001_create_activities.sql sql/002_strava_id_nullable.sql; do
+              psql -h localhost -U postgres -d $db -f $file
+            done
+          done
+      
+      - name: Run tests
+        run: pytest -v

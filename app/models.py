@@ -9,7 +9,7 @@ class Activity(Base):
     __tablename__ = "activities"
     
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    strava_activity_id: Mapped[int] = mapped_column(BigInteger)
+    strava_activity_id: Mapped[int | None] = mapped_column(BigInteger)
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     activity_type: Mapped[str]
     distance: Mapped[float]

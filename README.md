@@ -42,7 +42,7 @@ Apply the schema:
 
 Tests automatically use `runlog_test` through `tests/conftest.py`.
 
-### Running the Application
+## Running the Application
 
 Start the FASTAPI app locally using Uvicorn and open in a browser http://127.0.0.1:8000
 
@@ -52,7 +52,7 @@ uvicorn app.main:app --reload
 
 The --reload flag automatically restarts the server when code changes are detected. 
 
-### API Documentation
+## API Documentation
 Interactive API documentation available through FASTAPI's built-in Swagger UI
 
 With the application running
@@ -60,9 +60,23 @@ With the application running
 - Swagger UI: http://localhost:8000/docs
 - OpenAPI Schema: http://localhost:8000/openapi.json
 
-### Potential Future Improvements
+## Dashboard
+
+A small, static web page that charts my running data by calling this API. The dashboard visualizes the results, but more importantly,
+gives the API a real consumer that has no database access. The REST layer must do real work: the page can only use what the endpoints
+expose.
+
+With the application running, visit:
+```
+http://127.0.0.1:8000/dashboard/
+```
+
+![Runs dashboard](images/runs_dashboard.png)
+
+
+## Potential Future Improvements
 1. Sorting is fixed (newest activities first); a sort parameter is a possible later addition
 
-### Limitations
+## Limitations
 1. No authentication
 2. 409 Handler treats any IntegrityError as "already exists"

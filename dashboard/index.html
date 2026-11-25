@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111315">
+  <title>Runs — Running Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script defer src="/dashboard/app.js?v=20261125-2"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/dashboard/" aria-label="Runs home">
+        <span class="brand-mark">R</span>
+        <span>runs<span class="brand-period">.</span></span>
+      </a>
+      <div class="topbar-right">
+        <span class="status-dot"></span>
+        <span class="status-label" id="last-updated">NOT YET UPDATED</span>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light theme" title="Switch to light theme">☼</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="toolbar panel" aria-label="Dashboard filters">
+        <div class="range-heading">
+          <strong>DATE RANGE</strong>
+        </div>
+        <div class="date-controls">
+          <label>FROM <input id="date-from" type="date"></label>
+          <span class="date-separator">—</span>
+          <label>TO <input id="date-to" type="date"></label>
+          <div class="unit-toggle" role="group" aria-label="Distance unit">
+            <button type="button" data-unit="mi" aria-pressed="true">MI</button>
+            <button type="button" data-unit="km" aria-pressed="false">KM</button>
+          </div>
+          <button id="refresh-button" class="refresh-button" type="button">
+            <span class="refresh-icon">↻</span> Refresh
+          </button>
+        </div>
+      </section>
+
+      <section class="stats-grid" aria-label="Running totals">
+        <article class="stat-card panel featured-stat">
+          <div class="stat-top"><span class="eyebrow">TOTAL DISTANCE</span><span class="stat-icon">↗</span></div>
+          <div class="stat-value" id="total-distance">—</div>
+          <div class="stat-foot" id="total-distance-unit">MILES</div>
+        </article>
+        <article class="stat-card panel">
+          <div class="stat-top"><span class="eyebrow">TOTAL RUNS</span><span class="stat-icon">⌁</span></div>
+          <div class="stat-value" id="total-runs">—</div>
+          <div class="stat-foot">ACTIVITIES</div>
+        </article>
+        <article class="stat-card panel">
+          <div class="stat-top"><span class="eyebrow">TIME MOVING</span><span class="stat-icon">◷</span></div>
+          <div class="stat-value" id="total-time">—</div>
+          <div class="stat-foot">HOURS : MINUTES</div>
+        </article>
+        <article class="stat-card panel">
+          <div class="stat-top"><span class="eyebrow">AVERAGE DISTANCE</span><span class="stat-icon">↔</span></div>
+          <div class="stat-value" id="average-distance">—</div>
+          <div class="stat-foot" id="average-distance-unit">MI / RUN</div>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel chart-panel">
+          <div class="section-heading chart-heading">
+            <div><h2 id="chart-title">Weekly mileage</h2></div>
+            <div class="chart-controls">
+              <div class="view-toggle" role="group" aria-label="Chart view">
+                <button type="button" data-view="weekly" class="active" aria-pressed="true">WEEKLY</button>
+                <button type="button" data-view="monthly" aria-pressed="false">MONTHLY</button>
+              </div>
+              <span class="chart-unit" id="chart-unit">MI <span> / WEEK</span></span>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="weekly-chart" aria-label="Bar chart of running distance"></canvas></div>
+        </article>
+
+        <aside class="panel side-panel">
+          <p class="eyebrow">HIGHLIGHT</p>
+          <div class="side-number"><span id="best-week">—</span> <small id="best-week-unit">mi</small></div>
+          <h2>Best week</h2>
+          <p class="side-copy" id="best-week-caption">Your highest weekly mileage in this date range.</p>
+          <div class="side-divider"></div>
+          <p class="eyebrow">CURRENT RANGE</p>
+          <div class="monthly-row"><strong id="monthly-total">—</strong></div>
+          <p class="side-copy">Total distance across the selected date range.</p>
+        </aside>
+      </section>
+
+      <section class="panel recent-panel">
+        <div class="section-heading recent-heading">
+          <div><p class="eyebrow">THE LATEST EFFORT</p><h2>Recent runs</h2></div>
+          <span class="recent-count" id="recent-count">LATEST ACTIVITIES</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <colgroup><col><col><col><col><col><col class="elevation-column"><col class="heart-rate-column"></colgroup>
+            <thead><tr><th>ACTIVITY</th><th>DATE</th><th>DISTANCE</th><th>TIME</th><th>PACE</th><th>ELEVATION GAIN</th><th>HEART RATE</th></tr></thead>
+            <tbody id="recent-runs"><tr><td colspan="7" class="empty-state">Loading your runs…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div id="dashboard-message" class="message" role="status" aria-live="polite"></div>
+    </main>
+
+    <footer><span>RUNS<span class="brand-period">.</span></span><span>BUILT FOR THE LONG RUN</span></footer>
+  </div>
+</body>
+</html>

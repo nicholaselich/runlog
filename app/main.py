@@ -1,6 +1,8 @@
-from fastapi import Depends, FastAPI
-from sqlalchemy.orm import Session
-from app.db import get_db
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+
 from app.routers import activities, stats
 
 app = FastAPI()
@@ -11,4 +13,6 @@ app.include_router(stats.router, prefix="/v1")
 def health():
     return {"status": "ok"}
 
-
+# Serve the frontend from the same origin as the API.
+DASHBOARD_DIR = Path(__file__).resolve().parent.parent / "dashboard"
+app.mount("/dashboard", StaticFiles(directory=DASHBOARD_DIR, html=True), name="dashboard")

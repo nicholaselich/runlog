@@ -1,4 +1,4 @@
-# Running-RESTful-Services
+# Running REST Services
 
 ## Database Setup
 
@@ -42,11 +42,27 @@ Apply the schema:
 
 Tests automatically use `runlog_test` through `tests/conftest.py`.
 
+### Running the Application
+
+Start the FASTAPI app locally using Uvicorn and open in a browser http://127.0.0.1:8000
+
+``` 
+uvicorn app.main:app --reload
+```
+
+The --reload flag automatically restarts the server when code changes are detected. 
+
+### API Documentation
+Interactive API documentation available through FASTAPI's built-in Swagger UI
+
+With the application running
+
+- Swagger UI: http://localhost:8000/docs
+- OpenAPI Schema: http://localhost:8000/openapi.json
 
 ### Potential Future Improvements
 1. Sorting is fixed (newest activities first); a sort parameter is a possible later addition
 
 ### Limitations
-1. Tests run against the database
-2. No authentication
-3. 409 Handler treats any IntegrityError as "already exists"
+1. No authentication
+2. 409 Handler treats any IntegrityError as "already exists"

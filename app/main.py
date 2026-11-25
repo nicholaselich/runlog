@@ -1,10 +1,11 @@
 from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.routers import activities
+from app.routers import activities, stats
 
 app = FastAPI()
 app.include_router(activities.router, prefix="/v1")
+app.include_router(stats.router, prefix="/v1")
 
 @app.get("/health")
 def health():

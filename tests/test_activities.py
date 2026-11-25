@@ -20,11 +20,15 @@ VALID_BODY = {
 
 # List Activities Tests
 
-def test_get_activity_found():
-    response = client.get("/v1/activities/1")
-    assert response.status_code == 200                 
-    body = response.json()
-    assert "distance_m" in body
+def test_get_activity_found(created_ids):
+    response = post_activity(VALID_BODY, created_ids)
+    assert response.status_code == 201
+
+    activity_id = response.json()["id"]
+    response = client.get(f"/v1/activities/{activity_id}")
+
+    assert response.status_code == 200
+    assert "distance_m" in response.json()
 
 def test_get_activity_not_found():
     response = client.get("/v1/activities/999999")
@@ -41,7 +45,7 @@ def test_list_activities_default():
 
 # LIMIT, OFFSET, FILTER Tests
 
-def test_list_activities_limit():
+def test_list_activities_limit(sample_activities):
     response = client.get("/v1/activities?limit=3")
     assert len(response.json()) == 3
 
@@ -58,7 +62,7 @@ def test_list_activities_newest_first():
     times = [item["start_time"] for item in items]
     assert times == sorted(times, reverse=True)
 
-def test_list_activities_no_shared_ids():
+def test_list_activities_no_shared_ids(sample_activities):
     response1 = client.get("/v1/activities?limit=5&offset=0").json()
     response2 = client.get("/v1/activities?limit=5&offset=5").json()
     ids1 = {res["id"] for res in response1}
@@ -76,7 +80,7 @@ def test_list_activities_past_end_offset():
     assert response.status_code == 200
     assert len(response.json()) == 0
 
-def test_min_distance_filter():
+def test_min_distance_filter(sample_activities):
     threshold = 4828.0
     response = client.get(f"/v1/activities?limit=100&min_distance_m={threshold}")
 
@@ -86,7 +90,7 @@ def test_min_distance_filter():
     assert len(filtered) > 0
     assert all(item["distance_m"] >= threshold for item in filtered)
 
-def test_from_date_filter():
+def test_from_date_filter(sample_activities):
     cutoff = "2026-01-01"
     response = client.get(f"/v1/activities?limit=100&from={cutoff}")
 
@@ -96,7 +100,7 @@ def test_from_date_filter():
     assert len(filtered) > 0
     assert all(item["start_time"][:10] >= cutoff for item in filtered)
 
-def test_to_date_filter_is_exclusive():
+def test_to_date_filter_is_exclusive(sample_activities):
     cutoff = "2026-12-01"
     response = client.get(f"/v1/activities?limit=100&to={cutoff}")
 
@@ -106,7 +110,7 @@ def test_to_date_filter_is_exclusive():
     assert len(filtered) > 0
     assert all(item["start_time"][:10] < cutoff for item in filtered)
 
-def test_filters_combined():
+def test_filters_combined(sample_activities):
     cutoff = "2026-01-01"
     threshold = 4828.0
 
@@ -146,6 +150,28 @@ def created_ids():
         session.commit()
     finally:
         session.close()
+
+@pytest.fixture
+def sample_activities(created_ids):
+    with SessionLocal() as session:
+        activities_to_add = []
+
+        for i in range(10):
+            activity = Activity(
+                start_time=datetime(2026, 1, 1 + i, tzinfo=timezone.utc),
+                activity_type="Run",
+                distance=5000 + (i * 1000),
+                elapsed_time=3000,
+                moving_time=2900,
+            )
+            activities_to_add.append(activity)
+            session.add(activity)
+
+        session.flush()
+        created_ids.extend(activity.id for activity in activities_to_add)
+        session.commit()
+
+    return activities_to_add
 
 
 def post_activity(body, created_ids):
@@ -227,26 +253,26 @@ VALID_BODY = {
     "moving_time_s": 2900,
 }
 
-def create_run():
+def create_run(body, created_ids):
     """Create a run through the API and return its ID"""
-    response = client.post("/v1/activities", json=VALID_BODY)
+    response = post_activity(body, created_ids)
     assert response.status_code == 201
     return response.json()["id"]
 
-def test_delete_activity_success():
-    run_id = create_run() 
+def test_delete_activity_success(created_ids):
+    run_id = create_run(VALID_BODY, created_ids) 
     response = client.delete(f"/v1/activities/{run_id}")
     assert response.status_code == 204
     assert response.text == ""
 
-def test_deleted_activity_gone():
-    run_id = create_run()
+def test_deleted_activity_gone(created_ids):
+    run_id = create_run(VALID_BODY, created_ids)
     client.delete(f"/v1/activities/{run_id}")
     response = client.get(f"/v1/activities/{run_id}")
     assert response.status_code == 404
 
-def test_delete_twice_returns_404():
-    run_id = create_run()
+def test_delete_twice_returns_404(created_ids):
+    run_id = create_run(VALID_BODY, created_ids)
     first = client.delete(f"/v1/activities/{run_id}")
     second = client.delete(f"/v1/activities/{run_id}")
     assert first.status_code == 204
@@ -261,9 +287,9 @@ def test_delete_bad_id_returns_422():
     response = client.delete("/v1/activities/abc")
     assert response.status_code == 422
 
-def test_delete_only_removes_that_run():
-    keep_id = create_run()
-    remove_id = create_run()
+def test_delete_only_removes_that_run(created_ids):
+    keep_id = create_run(VALID_BODY, created_ids)
+    remove_id = create_run(VALID_BODY, created_ids)
     client.delete(f"/v1/activities/{remove_id}")
    
     assert client.get(f"/v1/activities/{keep_id}").status_code == 200
@@ -274,13 +300,10 @@ def test_delete_only_removes_that_run():
 # PATCH Tests
 
 @pytest.fixture
-def run_id():
-    """Creates a dummy run and deletes it after the PATCH tests"""
-    response = client.post("/v1/activities", json=VALID_BODY)
+def run_id(created_ids):
+    response = post_activity(VALID_BODY, created_ids)
     assert response.status_code == 201
-    new_id = response.json()["id"]
-    yield new_id
-    client.delete(f"/v1/activities/{new_id}")
+    return response.json()["id"]
 
 def patch(run_id, body):
     return client.patch(f"/v1/activities/{run_id}", json=body)

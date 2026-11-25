@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator, AwareDatetime, model_validator
 
 class ActivityOut(BaseModel):
@@ -70,3 +70,15 @@ class ActivityUpdate(BaseModel):
         if value is None:
             raise ValueError("Field Cannot Be Null")
         return value
+
+class WeeklyStatsOut(BaseModel):
+    week_start: date
+    runs: int
+    distance_m: float
+    moving_time_s: int
+
+class MonthlyStatsOut(BaseModel):
+    month_start: date
+    runs: int
+    distance_m: float
+    moving_time_s: int

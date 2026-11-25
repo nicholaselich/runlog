@@ -1,0 +1,16 @@
+WITH weeks AS (
+	SELECT generate_series(
+		date_trunc('week', MIN(start_time)),
+		date_trunc('week', MAX(start_time)),
+		'1 week'::interval
+	) as week_start
+FROM activities)
+
+SELECT w.week_start,
+       COUNT(a.start_time) as runs,
+       ROUND(COALESCE(SUM(a.distance), 0)::numeric, 2) as distance_m,
+       ROUND(COALESCE(SUM(a.moving_time), 0)::numeric, 2) as moving_time_s
+FROM weeks w
+LEFT JOIN activities a on w.week_start = date_trunc('week', a.start_time)
+GROUP BY w.week_start
+order by w.week_start

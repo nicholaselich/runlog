@@ -18,6 +18,7 @@ VALID_BODY = {
     "moving_time_s": 2900,
 }
 
+# List Activities Tests
 
 def test_get_activity_found():
     response = client.get("/v1/activities/1")
@@ -37,6 +38,8 @@ def test_list_activities_default():
     response = client.get("/v1/activities")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+# LIMIT, OFFSET, FILTER Tests
 
 def test_list_activities_limit():
     response = client.get("/v1/activities?limit=3")
@@ -130,6 +133,8 @@ def test_negative_min_distance_m_returns_422():
     response = client.get("/v1/activities?min_distance_m=-5")
     assert response.status_code == 422
 
+# POST Tests
+
 @pytest.fixture
 def created_ids():
     """Stores ids of rows created during a test for deletion"""
@@ -138,6 +143,7 @@ def created_ids():
     session = SessionLocal()
     try: 
         session.execute(delete(Activity).where(Activity.id.in_(ids)))
+        session.commit()
     finally:
         session.close()
 
@@ -209,5 +215,140 @@ def test_missing_required_field_returns_422(created_ids):
 def test_invalid_body_returns_422(overrides, created_ids):
     body = {**VALID_BODY, **overrides}
     response = post_activity(body, created_ids)
+    assert response.status_code == 422
+
+# DELETE Tests
+
+VALID_BODY = {
+    "start_time": "2026-03-05T14:00:00Z",
+    "activity_type": "Run",
+    "distance_m": 8046.7,
+    "elapsed_time_s": 3000,
+    "moving_time_s": 2900,
+}
+
+def create_run():
+    """Create a run through the API and return its ID"""
+    response = client.post("/v1/activities", json=VALID_BODY)
+    assert response.status_code == 201
+    return response.json()["id"]
+
+def test_delete_activity_success():
+    run_id = create_run() 
+    response = client.delete(f"/v1/activities/{run_id}")
+    assert response.status_code == 204
+    assert response.text == ""
+
+def test_deleted_activity_gone():
+    run_id = create_run()
+    client.delete(f"/v1/activities/{run_id}")
+    response = client.get(f"/v1/activities/{run_id}")
+    assert response.status_code == 404
+
+def test_delete_twice_returns_404():
+    run_id = create_run()
+    first = client.delete(f"/v1/activities/{run_id}")
+    second = client.delete(f"/v1/activities/{run_id}")
+    assert first.status_code == 204
+    assert second.status_code == 404
+
+def test_delete_nonexistent_returns_404():
+    response = client.delete("/v1/activities/999999999")
+    assert response.status_code == 404
+
+
+def test_delete_bad_id_returns_422():
+    response = client.delete("/v1/activities/abc")
+    assert response.status_code == 422
+
+def test_delete_only_removes_that_run():
+    keep_id = create_run()
+    remove_id = create_run()
+    client.delete(f"/v1/activities/{remove_id}")
+   
+    assert client.get(f"/v1/activities/{keep_id}").status_code == 200
+    assert client.get(f"/v1/activities/{remove_id}").status_code == 404
+
+    client.delete(f"/v1/activities/{keep_id}")      # clean up the kept id
+
+# PATCH Tests
+
+@pytest.fixture
+def run_id():
+    """Creates a dummy run and deletes it after the PATCH tests"""
+    response = client.post("/v1/activities", json=VALID_BODY)
+    assert response.status_code == 201
+    new_id = response.json()["id"]
+    yield new_id
+    client.delete(f"/v1/activities/{new_id}")
+
+def patch(run_id, body):
+    return client.patch(f"/v1/activities/{run_id}", json=body)
+
+def fetch(run_id):
+    return client.get(f"/v1/activities/{run_id}").json()
+
+def test_patch_single_field(run_id):
+    response = patch(run_id, {"activity_type": "Trail Run"})
+    assert response.status_code == 200
+    assert response.json()["activity_type"] == "Trail Run"
+
+def test_patch_leaves_other_fields_alone(run_id):
+    before = fetch(run_id)
+    patch(run_id, {"activity_type": "Trail Run"})
+    after = fetch(run_id)
+    assert after["distance_m"] == before["distance_m"]
+    assert after["elapsed_time_s"] == before["elapsed_time_s"]
+    assert after["start_time"] == before["start_time"]
+
+def test_patch_renamed_field_is_saved(run_id):
+    response = patch(run_id, {"distance_m": 10000})
+    assert response.status_code == 200
+    assert response.json()["distance_m"] == 10000
+    assert fetch(run_id)["distance_m"] == 10000
+
+def test_patch_sets_then_clears_nullable_field(run_id):
+    assert patch(run_id, {"avg_heartrate": 150}).json()["avg_heartrate"] == 150
+    cleared = patch(run_id, {"avg_heartrate": None})
+    assert cleared.status_code == 200
+    assert cleared.json()["avg_heartrate"] is None
+
+def test_patch_empty_body_changes_nothing(run_id):
+    before = fetch(run_id)
+    response = patch(run_id, {})
+    assert response.status_code == 200
+    assert fetch(run_id) == before
+
+def test_patch_both_times_valid_together(run_id):
+    response = patch(run_id, {"elapsed_time_s": 4000, "moving_time_s": 3500})
+    assert response.status_code == 200
+    assert response.json()["elapsed_time_s"] == 4000
+    assert response.json()["moving_time_s"] == 3500
+
+def test_patch_null_on_required_field_returns_422(run_id):
+    assert patch(run_id, {"distance_m": None}).status_code == 422
+
+def test_patch_moving_over_stored_elapsed_returns_422(run_id):
+    before = fetch(run_id)
+    assert patch(run_id, {"moving_time_s": 9999}).status_code == 422
+    assert fetch(run_id) == before
+
+def test_patch_elapsed_under_stored_moving_returns_422(run_id):
+    before = fetch(run_id)
+    assert patch(run_id, {"elapsed_time_s": 2000}).status_code == 422
+    assert fetch(run_id) == before
+
+def test_patch_invalid_value_returns_422(run_id):
+    assert patch(run_id, {"distance_m": 0}).status_code == 422
+
+def test_patch_strava_id_not_allowed(run_id):
+    assert patch(run_id, {"strava_activity_id": 5}).status_code == 422
+
+def test_patch_nonexistent_returns_404():
+    response = client.patch("/v1/activities/999999999", json={"activity_type": "Run"})
+    assert response.status_code == 404
+
+def test_patch_bad_id_returns_422():
+    response = client.patch("/v1/activities/abc", json={"activity_type": "Run"})
     assert response.status_code == 422
 

@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db import get_db
 from app.models import Activity
-from app.schemas import ActivityOut, ActivityCreate
+from app.schemas import ActivityOut, ActivityCreate, ActivityUpdate
 
 from datetime import date
 
@@ -64,3 +64,43 @@ def create_activity(payload: ActivityCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="Activity Already Exists")
     db.refresh(activity)
     return activity
+
+@router.delete("/{activity_id}", status_code=204)
+def delete_activity(activity_id: int, db: Session = Depends(get_db)):
+    activity = db.get(Activity, activity_id)
+    if activity is None:
+        raise HTTPException(status_code=404, detail="Activity Not Found")
+    db.delete(activity)
+    db.commit()
+
+FIELD_MAP = {
+    "distance_m": "distance",
+    "elapsed_time_s": "elapsed_time",
+    "moving_time_s": "moving_time",
+    "elevation_gain_m": "elevation_gain",
+    "elevation_loss_m": "elevation_loss",
+}
+
+@router.patch("/{activity_id}", response_model=ActivityOut)
+def update_activity(activity_id: int, payload: ActivityUpdate, db: Session = Depends(get_db)):
+    activity = db.get(Activity, activity_id)
+    if activity is None:
+        raise HTTPException(status_code=404, detail="Activity Not Found")
+    
+    changes = payload.model_dump(exclude_unset=True)
+    for field, value in changes.items():
+        setattr(activity, FIELD_MAP.get(field, field), value)
+
+    if activity.moving_time > activity.elapsed_time:
+        db.rollback()
+        raise HTTPException(status_code=422, detail="Moving Time Cannot Exceed Elapsed Time")
+    
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Update Violates A Constraint")
+    db.refresh(activity)
+    return activity
+
+

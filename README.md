@@ -1,14 +1,53 @@
 # Running REST Services
 
-## Database Setup
+## About
 
-The application uses PostgreSQL running in Docker
+A FastAPI service built with SQLAlchemy and PostgreSQL for storing and analyzing my Strava running data. I love to run and 
+wanted to combine a passion with learning how to design, create, and test REST services on real data. 
 
-### Database
+## Architecture
 
-- `runlog`: production database
+```
+Dashboard / CURL 
+      |
+      v
+FastAPI (routers + Pydantic schemas)
+      | SQLAlchemy models
+      v
+Postgres (Docker)
+```
+
+- **Router** (`app/routers/`): endpoints
+- **Schemas** (`app/schemas.py`): the JSON the API accepts and returns to the client
+- **Models** (`app/models.py`): database table as Python classes
+- **sql** (`sql/`): the table schema
+
+## Prerequisites
+- Python 3.12
+- Docker
+
+## Setup
+
+### 1. Start Postgres
+
+```bash
+docker run --name runlog-db \
+  -e POSTGRES_PASSWORD={PASSWORD} \
+  -e POSTGRES_DB=runlog \
+  -p 5432:5432 \
+  -v runlog-pgdata:/var/lib/postgresql/data \
+  -d postgres:16
+```
+
+### 2. Create the databases
+- `runlog`: production database (already created in Step 1)
 - `runlog_test`: test database
 
+```bash
+docker exec -i runlog-db psql -U postgres -c "CREATE DATABASE runlog_test;"
+```
+
+### 3. Apply the schema
 Both databases use the same schema defined in `sql/001_create_activities.sql`. Run the following in order against each database:
 
 ```
@@ -19,46 +58,43 @@ docker exec -i runlog-db psql -U postgres -d runlog_test < sql/001_create_activi
 docker exec -i runlog-db psql -U postgres -d runlog_test < sql/002_strava_id_nullable.sql
 ```
 
-### Environment Variables
+### 4. Dependencies and Environment Variables
+Create a .venv and install dependencies defined in `requirements.txt`
 
-Create a `.env` file in the project root:
+Set environment variables. Create a `.env` file in the project root. `db.py` and `conftest.py` loads the file with python-dotenv.
 
     DATABASE_URL=postgresql://postgres:{PASSWORD}@localhost:5432/runlog
     TEST_DATABASE_URL=postgresql://postgres:{PASSWORD}@localhost:5432/runlog_test
 
-### Initialize Test Database
+## Run the Application
 
-Create the test database:
+Start the FastAPI app locally using Uvicorn:
 
-    docker exec -it runlog-db psql -U postgres -c "CREATE DATABASE runlog_test;"
-
-Apply the schema:
-
-    docker exec -i runlog-db psql -U postgres -d runlog_test < sql/001_create_activities.sql
-
-### Running Tests
-
-    pytest -v
-
-Tests automatically use `runlog_test` through `tests/conftest.py`.
-
-## Running the Application
-
-Start the FASTAPI app locally using Uvicorn and open in a browser http://127.0.0.1:8000
-
-``` 
+```bash
 uvicorn app.main:app --reload
 ```
 
-The --reload flag automatically restarts the server when code changes are detected. 
+- Swagger UI: <http://127.0.0.1:8000/docs>
+- OpenAPI schema: <http://127.0.0.1:8000/openapi.json>
+- Health check: <http://127.0.0.1:8000/health>
 
-## API Documentation
-Interactive API documentation available through FASTAPI's built-in Swagger UI
+## API Overview
 
-With the application running
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/v1/activities` | List activities with optional date, distance, and pagination filters |
+| GET | `/v1/activities/{activity_id}` | Get one activity |
+| POST | `/v1/activities` | Create an activity |
+| PATCH | `/v1/activities/{activity_id}` | Update an activity |
+| DELETE | `/v1/activities/{activity_id}` | Delete an activity |
+| GET | `/v1/stats/weekly` | Weekly activity totals |
+| GET | `/v1/stats/monthly` | Monthly activity totals |
 
-- Swagger UI: http://localhost:8000/docs
-- OpenAPI Schema: http://localhost:8000/openapi.json
+## Running Tests
+
+    pytest -v
+
+Run the test suite for the endpoints. Tests automatically use `runlog_test` through `tests/conftest.py`.
 
 ## Dashboard
 
@@ -73,10 +109,10 @@ http://127.0.0.1:8000/dashboard/
 
 ![Runs dashboard](images/runs_dashboard.png)
 
+## Design Decisions
+See [DECISIONS.md](DECISIONS.md)
 
-## Potential Future Improvements
-1. Sorting is fixed (newest activities first); a sort parameter is a possible later addition
-
-## Limitations
+## Known Limitations
 1. No authentication
-2. 409 Handler treats any IntegrityError as "already exists"
+2. List always sorted newest activities first
+3. 409 Handler treats any IntegrityError as "already exists"

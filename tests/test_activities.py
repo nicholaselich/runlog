@@ -100,15 +100,22 @@ def test_from_date_filter(sample_activities):
     assert len(filtered) > 0
     assert all(item["start_time"][:10] >= cutoff for item in filtered)
 
-def test_to_date_filter_is_exclusive(sample_activities):
-    cutoff = "2026-12-01"
+def test_to_date_filter_includes_entire_day(sample_activities, created_ids):
+    cutoff = "2026-01-10"
+    cutoff_day_activity = {
+        **VALID_BODY,
+        "start_time": f"{cutoff}T23:59:59Z",
+    }
+    created = post_activity(cutoff_day_activity, created_ids)
+    assert created.status_code == 201
+    cutoff_day_id = created.json()["id"]
+
     response = client.get(f"/v1/activities?limit=100&to={cutoff}")
 
     assert response.status_code == 200
     filtered = response.json()
-
-    assert len(filtered) > 0
-    assert all(item["start_time"][:10] < cutoff for item in filtered)
+    assert cutoff_day_id in {item["id"] for item in filtered}
+    assert all(item["start_time"][:10] <= cutoff for item in filtered)
 
 def test_filters_combined(sample_activities):
     cutoff = "2026-01-01"

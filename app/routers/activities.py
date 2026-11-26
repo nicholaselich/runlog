@@ -7,7 +7,7 @@ from app.db import get_db
 from app.models import Activity
 from app.schemas import ActivityOut, ActivityCreate, ActivityUpdate
 
-from datetime import date
+from datetime import date, timedelta
 
 router = APIRouter(prefix="/activities", tags=["activities"])
 
@@ -24,7 +24,7 @@ def list_activities(
     if date_from is not None:
         stmt = stmt.where(Activity.start_time >= date_from)
     if date_to is not None:
-        stmt = stmt.where(Activity.start_time < date_to)
+        stmt = stmt.where(Activity.start_time < date_to + timedelta(days=1))
     if min_distance_m is not None:
         stmt = stmt.where(Activity.distance >= min_distance_m)
 

@@ -20,7 +20,7 @@ Postgres (Docker)
 
 - **Router** (`app/routers/`): endpoints
 - **Schemas** (`app/schemas.py`): the JSON the API accepts and returns to the client
-- **Models** (`app/models.py`): database table as Python classes
+- **Models** (`app/models.py`): database table as a Python class
 - **sql** (`sql/`): the table schema
 
 ## Prerequisites
@@ -41,7 +41,7 @@ docker run --name runlog-db \
 ```
 
 ### 2. Create the databases
-- `runlog`: production database (already created in Step 1)
+- `runlog`: production database (created in Step 1)
 - `runlog_test`: test database
 
 ```bash

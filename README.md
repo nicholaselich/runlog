@@ -1,10 +1,10 @@
-# Running REST Services
+# Running REST API
 
 [![Tests](https://github.com/nicholaselich/runlog/actions/workflows/tests.yml/badge.svg)](https://github.com/nicholaselich/runlog/actions/workflows/tests.yml)
 
 
-A FastAPI service built with SQLAlchemy and PostgreSQL for storing and analyzing my Strava running data. I love to run and 
-wanted to combine one of my passions with learning how to design, create, and test REST services on real data. 
+A FastAPI service built with SQLAlchemy and PostgreSQL for storing and analyzing my Strava running data. I enjoy running and 
+wanted to combine one of my passions with learning how to design, create, and test REST services. 
 
 ## Architecture
 
@@ -99,8 +99,7 @@ Run the test suite for the endpoints. Tests automatically use `runlog_test` thro
 
 ## Dashboard
 
-A small, static web page that charts my running data by calling this API. The dashboard visualizes the results, but more importantly,
-gives the API a real consumer that has no database access. The REST layer must do real work: the page can only use what the endpoints
+A small, static Codex-generated web page that charts my running data by calling this API. The dashboard visualizes the results, but more importantly, gives the API a real consumer that has no database access. The REST layer must do real work: the page can only use what the endpoints
 expose.
 
 With the application running, visit:
